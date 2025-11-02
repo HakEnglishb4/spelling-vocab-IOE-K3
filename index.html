@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Word Scramble Vocabulary Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              'sans': ['Nunito', 'sans-serif'],
+            },
+            keyframes: {
+              shake: {
+                '0%, 100%': { transform: 'translateX(0)' },
+                '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-10px)' },
+                '20%, 40%, 60%, 80%': { transform: 'translateX(10px)' },
+              },
+              pop: {
+                '0%': { transform: 'scale(0.9)', opacity: '0' },
+                '50%': { transform: 'scale(1.1)', opacity: '1' },
+                '100%': { transform: 'scale(1)', opacity: '1' },
+              },
+            },
+            animation: {
+              shake: 'shake 0.6s cubic-bezier(.36,.07,.19,.97) both',
+              pop: 'pop 0.3s ease-out',
+            },
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-sky-100 text-slate-800">
+    <div id="root"></div>
+    <script type="module">
+      import React, { useState, useEffect, useCallback, useMemo } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import { GoogleGenAI, Type } from "@google/genai";
+
+      // --- From types.ts ---
+      // (Interfaces and types are defined here directly)
+
+      // --- From constants.ts ---
+      const WORD_LIST = [
+          "book 📖", "chair 🪑", "eraser 🧼", "pen 🖊️", "pencil ✏️", "table 🍽️", "desk 💻", "bookcase 📚",
+          "notebook 📓", "ruler 📏", "pupil 🧑‍🎓", "teacher 👩‍🏫", "bag 🎒", "board 📋", "chalk ✍️", "ball ⚽",
+          "bicycle 🚲", "camera 📷", "car 🚗", "computer 💻", "cupboard 🚪", "doll 🎎", "kite 🪁", "robot 🤖",
+          "train 🚆", "watch ⌚", "baby 👶", "brother 👦", "sister 👧", "cousin 🧑‍🤝‍🧑", "father 👨", "mother 👩",
+          "grandfather 👴", "grandmother 👵", "uncle 👨‍🦰", "aunt 👩‍🦰", "young 🌱", "old 🦳", "beautiful ✨",
+          "ugly 👹", "thin 🧍", "fat 🐘", "big 🐘", "small 🐁", "clean 🧼", "dirty 🐷", "sad 😢", "happy 😄",
+          "short 📏", "long ↔️", "bear 🐻", "bird 🐦", "cat 🐈", "chicken 🐔", "crocodile 🐊", "hippo 🦛",
+          "dog 🐕", "dolphin 🐬", "duck 🦆", "elephant 🐘", "fish 🐠", "giraffe 🦒", "horse 🐎", "lion 🦁",
+          "monkey 🐒", "mouse 🐁", "snake 🐍", "tiger 🐅", "arm 💪", "ear 👂", "eye 👀", "face 😊", "foot 🦶",
+          "feet 👣", "hair 👱", "hand ✋", "head 👤", "leg 🦵", "mouth 👄", "neck 🧣", "nose 👃", "shoulder 🤷",
+          "tail 🐈", "tooth 🦷", "teeth 🦷", "dress 👗", "hat 👒", "jacket 🧥", "shirt 👕", "shoes 👟",
+          "shorts 🩳", "skirt 👗", "socks 🧦", "sweater 🧥", "trousers 👖", "t-shirt 👕", "bike 🚲",
+          "boat 🚤", "bus 🚌", "helicopter 🚁", "truck 🚚", "motorbike 🏍️", "plane ✈️", "dance 💃",
+          "drive 🚗", "fly 🕊️", "listen 🎧", "listen to music 🎶", "match 🔥", "play badminton 🏸",
+          "play basketball 🏀", "play football ⚽", "play tennis 🎾", "play the guitar 🎸", "play the piano 🎹",
+          "point 👉", "read a book 📖", "ride 🏇", "watch TV 📺", "ride a bike 🚲", "say 💬", "sing 🎤",
+          "sit down 🪑", "stand up 🧍", "swim 🏊", "talk 🗣️", "walk 🚶", "armchair 🛋️", "bath 🛀",
+          "bathroom 🚽", "bed 🛏️", "bedroom 🛌", "wardrobe 🚪", "clock ⏰", "dining room 🍽️", "kitchen 🍳",
+          "lamp 💡", "living room 🛋️", "mat 🧘", "mirror 🪞", "phone 📱", "picture 🖼️", "room 🏠",
+          "sofa 🛋️", "apple 🍎", "banana 🍌", "bread 🍞", "grape 🍇", "watermelon 🍉", "hamburger 🍔",
+          "cake 🎂", "cookie 🍪", "chocolate 🍫", "ice cream 🍦", "orange 🍊", "pineapple 🍍",
+          "potato 🥔", "strawberry 🍓", "tomato 🍅", "flower 🌸"
+      ];
+
+      // --- Utility Functions (from App.tsx and services/geminiService.ts) ---
+      const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{3000}-\u{303F}]/gu;
+      const stripEmoji = (str) => str.replace(EMOJI_REGEX, '').trim();
+      const getEmoji = (str) => (str.match(EMOJI_REGEX) || []).join('');
+
+      const shuffleArray = (array) => {
+        const newArray = [...array];
+        for (let i = newArray.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+      };
+
+      const scramblePhrase = (phrase) => {
+          let letterIdCounter = 0;
+          const cleanPhrase = phrase.replace(/[^a-zA-Z\s-]/g, '');
+
+          return cleanPhrase.split(' ').map(word => {
+              if (!word) return [];
+              let scrambledChars;
+              do {
+                  scrambledChars = shuffleArray(word.split(''));
+              } while (scrambledChars.join('') === word && word.length > 1);
+              
+              return scrambledChars.map(char => ({
+                  char,
+                  id: letterIdCounter++,
+                  used: false,
+              }));
+          }).filter(wordArray => wordArray.length > 0);
+      };
+
+      const speak = (text, rate = 1.0, lang = 'en-US') => {
+          if ('speechSynthesis' in window) {
+              window.speechSynthesis.cancel();
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = lang;
+              utterance.rate = rate;
+              utterance.volume = 1;
+              window.speechSynthesis.speak(utterance);
+          }
+      };
+      
+      const spellAndSpeak = (word, setSpellingIndex, onEnd) => {
+          if (!('speechSynthesis' in window)) {
+              onEnd();
+              return;
+          }
+          window.speechSynthesis.cancel();
+          const letterVisualIndices = [];
+          word.split('').forEach((char, index) => {
+              if (char.trim() !== '' && char !== '-') {
+                  letterVisualIndices.push(index);
+              }
+          });
+          const lettersToSpell = word.replace(/[\s-]/g, '').split('');
+          let audioLetterIndex = 0;
+          const groupSize = lettersToSpell.length > 5 ? (Math.random() > 0.5 ? 4 : 3) : 3;
+
+          const speakNextLetter = () => {
+              if (audioLetterIndex < lettersToSpell.length) {
+                  const visualIndex = letterVisualIndices[audioLetterIndex];
+                  setSpellingIndex(visualIndex);
+                  const utterance = new SpeechSynthesisUtterance(lettersToSpell[audioLetterIndex]);
+                  utterance.lang = 'en-US';
+                  utterance.rate = 4.0;
+                  utterance.pitch = 1.2;
+                  utterance.volume = 1;
+                  utterance.onend = () => {
+                      audioLetterIndex++;
+                      const isGroupEnd = audioLetterIndex % groupSize === 0 && audioLetterIndex < lettersToSpell.length;
+                      setTimeout(speakNextLetter, isGroupEnd ? 200 : 40);
+                  };
+                  window.speechSynthesis.speak(utterance);
+              } else {
+                  setSpellingIndex(null);
+                  const fullWordUtterance = new SpeechSynthesisUtterance(word);
+                  fullWordUtterance.lang = 'en-US';
+                  fullWordUtterance.rate = 1.0;
+                  fullWordUtterance.volume = 1;
+                  fullWordUtterance.onend = onEnd;
+                  setTimeout(() => window.speechSynthesis.speak(fullWordUtterance), 300);
+              }
+          };
+          speakNextLetter();
+      };
+
+      const spellThenSpeakTwice = (word) => {
+          if (!('speechSynthesis' in window)) return;
+          window.speechSynthesis.cancel();
+          const lettersToSpell = word.replace(/[\s-]/g, '').split('');
+          let audioLetterIndex = 0;
+          const groupSize = lettersToSpell.length > 5 ? (Math.random() > 0.5 ? 4 : 3) : 3;
+
+          const speakNextLetter = () => {
+              if (audioLetterIndex < lettersToSpell.length) {
+                  const utterance = new SpeechSynthesisUtterance(lettersToSpell[audioLetterIndex]);
+                  utterance.lang = 'en-US';
+                  utterance.rate = 4.0;
+                  utterance.pitch = 1.2;
+                  utterance.volume = 1;
+                  utterance.onend = () => {
+                      audioLetterIndex++;
+                      const isGroupEnd = audioLetterIndex % groupSize === 0 && audioLetterIndex < lettersToSpell.length;
+                      setTimeout(speakNextLetter, isGroupEnd ? 200 : 40);
+                  };
+                  window.speechSynthesis.speak(utterance);
+              } else {
+                  const speakFullWord = (onEndCallback) => {
+                       const fullWordUtterance = new SpeechSynthesisUtterance(word);
+                       fullWordUtterance.lang = 'en-US';
+                       fullWordUtterance.rate = 1.0;
+                       fullWordUtterance.volume = 1;
+                       if (onEndCallback) {
+                           fullWordUtterance.onend = onEndCallback;
+                       }
+                       window.speechSynthesis.speak(fullWordUtterance);
+                  };
+                  setTimeout(() => {
+                      speakFullWord(() => {
+                          setTimeout(() => speakFullWord(), 300);
+                      });
+                  }, 400);
+              }
+          };
+          speakNextLetter();
+      };
+      
+      // --- From services/geminiService.ts ---
+      const getTranslatedWords = async (words) => {
+        if (!process.env.API_KEY) {
+          throw new Error("API_KEY environment variable not set");
+        }
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const wordsWithoutEmojis = words.map(stripEmoji).filter(w => w.length > 0);
+        const prompt = `Translate the following English words into Vietnamese. Provide the response as a single, valid JSON array of objects. Each object must have an "english" and a "vietnamese" key. Do not include any other text, markdown formatting, or explanations in your response. The output must be only the JSON array. The words are: ${JSON.stringify(wordsWithoutEmojis)}`;
+        
+        try {
+          const response = await ai.models.generateContent({
+              model: "gemini-2.5-flash",
+              contents: prompt,
+              config: {
+                  responseMimeType: "application/json",
+                  responseSchema: {
+                      type: Type.ARRAY,
+                      items: {
+                          type: Type.OBJECT,
+                          properties: {
+                              english: { type: Type.STRING },
+                              vietnamese: { type: Type.STRING }
+                          },
+                          required: ["english", "vietnamese"]
+                      }
+                  }
+              }
+          });
+      
+          const jsonText = response.text.trim();
+          const translatedWords = JSON.parse(jsonText);
+          const translationMap = new Map(translatedWords.map(w => [w.english.toLowerCase(), w.vietnamese]));
+      
+          const result = words.map(originalWordWithEmoji => {
+            const wordWithoutEmoji = stripEmoji(originalWordWithEmoji);
+            if (!wordWithoutEmoji) return null;
+            const vietnamese = translationMap.get(wordWithoutEmoji.toLowerCase());
+            if (vietnamese) {
+              return { english: originalWordWithEmoji, vietnamese };
+            }
+            return null;
+          }).filter((w) => w !== null);
+          
+          return result;
+      
+        } catch (error) {
+          console.error("Error fetching translations from Gemini:", error);
+          throw new Error("Failed to get translations.");
+        }
+      };
+
+
+      // --- From App.tsx ---
+      const SpeakerIcon = ({ className }) => (
+          React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
+              React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" })
+          )
+      );
+
+      const LoadingSpinner = () => (
+          React.createElement('div', { className: "flex justify-center items-center h-full" },
+              React.createElement('div', { className: "animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-cyan-500" })
+          )
+      );
+
+      const StartScreen = ({ onStart }) => {
+          const [name, setName] = useState('');
+          return (
+              React.createElement('div', { className: "flex flex-col items-center justify-center h-full p-4 animate-pop" },
+                  React.createElement('h1', { className: "text-5xl font-bold text-cyan-600 mb-4" }, "Word Scramble"),
+                  React.createElement('p', { className: "text-xl text-slate-600 mb-8" }, "Kiểm tra vốn từ vựng của bạn!"),
+                  React.createElement('input', {
+                      type: "text",
+                      value: name,
+                      onChange: (e) => setName(e.target.value),
+                      placeholder: "Nhập tên của bạn",
+                      className: "w-full max-w-sm px-4 py-3 bg-white border-2 border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+                  }),
+                  React.createElement('button', {
+                      onClick: () => onStart(name.trim() || 'Player'),
+                      disabled: !name.trim(),
+                      className: "mt-6 w-full max-w-sm px-6 py-3 bg-cyan-500 text-white font-bold rounded-lg hover:bg-cyan-400 disabled:bg-slate-300 disabled:cursor-not-allowed transition-transform transform hover:scale-105"
+                  }, "Bắt đầu")
+              )
+          );
+      };
+
+      const GameScreen = ({ playerName, score, currentWord, wordIndex, totalWords, onCorrect, onIncorrect, onNextWord }) => {
+          const [scrambled, setScrambled] = useState([]);
+          const [playerAnswer, setPlayerAnswer] = useState([]);
+          const [incorrectAttempts, setIncorrectAttempts] = useState(0);
+          const [isWrong, setIsWrong] = useState(false);
+          const [isCorrect, setIsCorrect] = useState(false);
+          const [spelledLetterIndex, setSpelledLetterIndex] = useState(null);
+          
+          const wordText = currentWord.english;
+          const emoji = useMemo(() => getEmoji(wordText), [wordText]);
+          const wordTextWithoutEmoji = useMemo(() => stripEmoji(wordText), [wordText]);
+      
+          const wordParts = useMemo(() => wordTextWithoutEmoji.split(' '), [wordTextWithoutEmoji]);
+          const totalLengthWithoutSpaces = useMemo(() => wordParts.join('').length, [wordParts]);
+      
+          const resetForNewWord = useCallback(() => {
+              setIsCorrect(false);
+              setSpelledLetterIndex(null);
+              setScrambled(scramblePhrase(wordTextWithoutEmoji));
+              setPlayerAnswer([]);
+              setIncorrectAttempts(0);
+              setIsWrong(false);
+              spellThenSpeakTwice(wordTextWithoutEmoji);
+          }, [wordTextWithoutEmoji]);
+      
+          useEffect(() => {
+              resetForNewWord();
+          }, [currentWord, resetForNewWord]);
+          
+          const handleLetterClick = (letter) => {
+              if (isCorrect || isWrong) return;
+              setPlayerAnswer([...playerAnswer, letter]);
+              setScrambled(prevScrambled => 
+                  prevScrambled.map(wordGroup => 
+                      wordGroup.map(l => l.id === letter.id ? { ...l, used: true } : l)
+                  )
+              );
+          };
+          
+          const handleUndo = () => {
+              if (playerAnswer.length === 0 || isCorrect || isWrong) return;
+              const lastLetter = playerAnswer[playerAnswer.length - 1];
+              setPlayerAnswer(playerAnswer.slice(0, -1));
+              setScrambled(prevScrambled => 
+                  prevScrambled.map(wordGroup => 
+                      wordGroup.map(l => l.id === lastLetter.id ? { ...l, used: false } : l)
+                  )
+              );
+          };
+      
+          const handleCheck = useCallback(() => {
+              if (isCorrect) return;
+      
+              let tempAnswer = [...playerAnswer];
+              const reconstructedAnswer = wordParts.map(part =>
+                  tempAnswer.splice(0, part.length).map(l => l.char).join('')
+              ).join(' ');
+      
+              if (reconstructedAnswer === wordTextWithoutEmoji) {
+                  setIsCorrect(true);
+                  const points = incorrectAttempts < 2 ? 10 : 0;
+                  onCorrect(points);
+                  spellAndSpeak(wordTextWithoutEmoji, setSpelledLetterIndex, () => {
+                      setTimeout(onNextWord, 500);
+                  });
+              } else {
+                  setIsWrong(true);
+                  onIncorrect(currentWord);
+                  setIncorrectAttempts(prev => prev + 1);
+                  setTimeout(() => {
+                      setPlayerAnswer([]);
+                      setScrambled(prev => prev.map(group => group.map(l => ({ ...l, used: false }))));
+                      setIsWrong(false);
+                  }, 800);
+              }
+          }, [isCorrect, playerAnswer, wordTextWithoutEmoji, incorrectAttempts, onCorrect, onIncorrect, onNextWord, setSpelledLetterIndex, wordParts, currentWord]);
+      
+          useEffect(() => {
+              if (!isCorrect && !isWrong && playerAnswer.length > 0 && playerAnswer.length === totalLengthWithoutSpaces) {
+                  handleCheck();
+              }
+          }, [playerAnswer, totalLengthWithoutSpaces, isCorrect, isWrong, handleCheck]);
+      
+          const renderPlayerAnswer = () => {
+              if (playerAnswer.length === 0) {
+                  return React.createElement('span', { className: "text-xl text-slate-400" }, "Gõ từ vào đây");
+              }
+      
+              const elements = [];
+              let letterIndex = 0;
+          
+              wordParts.forEach((part, partIndex) => {
+                  const wordLetters = playerAnswer.slice(letterIndex, letterIndex + part.length);
+                  
+                  wordLetters.forEach((letter) => {
+                      elements.push(
+                          React.createElement('span', { key: letter.id, className: "text-4xl font-bold tracking-widest mx-1 animate-pop" }, letter.char)
+                      );
+                  });
+          
+                  if (partIndex < wordParts.length - 1 && playerAnswer.length > letterIndex + part.length) {
+                      elements.push(React.createElement('span', { key: `space-${partIndex}`, className: "w-6 md:w-8 inline-block" }));
+                  }
+          
+                  letterIndex += part.length;
+              });
+          
+              return React.createElement('div', { className: "flex items-center justify-center flex-wrap" }, ...elements);
+          };
+      
+          return React.createElement('div', { className: "flex flex-col h-full p-4 md:p-8" },
+              React.createElement('div', { className: "flex justify-between items-center mb-6" },
+                  React.createElement('div', null,
+                      React.createElement('p', { className: "text-xl font-semibold text-cyan-600" }, playerName),
+                      React.createElement('p', { className: "text-3xl font-bold" }, `Điểm: ${score}`)
+                  ),
+                  React.createElement('p', { className: "text-lg font-semibold bg-cyan-100 text-cyan-800 px-4 py-2 rounded-lg" }, `${wordIndex + 1} / ${totalWords}`)
+              ),
+              React.createElement('div', { className: "flex-grow flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm rounded-xl p-6 shadow-xl" },
+                  React.createElement('div', { className: "text-center" },
+                      React.createElement('p', { className: "text-lg text-slate-500 mb-2" }, "Gợi ý (Tiếng Việt):"),
+                      React.createElement('p', { className: "text-3xl md:text-4xl font-bold text-cyan-700" },
+                          currentWord.vietnamese,
+                          React.createElement('span', { className: "text-4xl" }, ` ${emoji}`)
+                      )
+                  ),
+                  React.createElement('div', { className: `my-8 min-h-[60px] w-full max-w-lg flex items-center justify-center flex-wrap bg-sky-50 rounded-lg p-4 border-2 ${isWrong ? 'border-red-500 animate-shake' : 'border-slate-300'}` },
+                      isCorrect ? (
+                          wordTextWithoutEmoji.split('').map((char, index) => (
+                               char === ' ' ? React.createElement('span', { key: index, className: "w-6 md:w-8 inline-block" }) :
+                               char === '-' ? React.createElement('span', { key: index, className: "text-4xl font-bold tracking-widest mx-1" }, "-") :
+                               React.createElement('span', { key: index, className: `text-4xl font-bold tracking-widest mx-1 transition-transform duration-150 ${index === spelledLetterIndex ? 'scale-125 text-cyan-500' : ''}` }, char)
+                          ))
+                      ) : (
+                          renderPlayerAnswer()
+                      )
+                  ),
+                  React.createElement('div', { className: "flex flex-wrap justify-center items-center gap-x-6 gap-y-3 md:gap-y-4 mb-8" },
+                       scrambled.map((wordGroup, groupIndex) => (
+                          React.createElement('div', { key: groupIndex, className: "flex flex-wrap justify-center gap-2 md:gap-4" },
+                              wordGroup.map((letter) => (
+                                  React.createElement('button', {
+                                    key: letter.id,
+                                    onClick: () => handleLetterClick(letter),
+                                    disabled: letter.used || isCorrect || isWrong,
+                                    className: "w-12 h-12 md:w-16 md:h-16 bg-cyan-500 text-white text-2xl md:text-3xl font-bold rounded-lg shadow-md hover:bg-cyan-400 disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all transform hover:scale-110 disabled:transform-none"
+                                  }, letter.char)
+                              ))
+                          )
+                      ))
+                  ),
+                  React.createElement('div', { className: "flex items-center gap-4" },
+                      React.createElement('button', { onClick: handleUndo, className: "px-6 py-3 bg-slate-200 rounded-lg hover:bg-slate-300 transition disabled:opacity-50", disabled: isCorrect || isWrong }, "Hoàn tác"),
+                      React.createElement('button', { onClick: () => speak(wordTextWithoutEmoji), className: "p-4 bg-slate-200 rounded-full hover:bg-slate-300 transition" }, React.createElement(SpeakerIcon, { className: "w-6 h-6" }))
+                  )
+              )
+          );
+      };
+      
+      const EndScreen = ({ score, incorrectWords, onRestart, onRetryIncorrect }) => {
+          const [showIncorrect, setShowIncorrect] = useState(false);
+      
+          return (
+              React.createElement('div', { className: "flex flex-col items-center justify-center h-full p-4 animate-pop" },
+                  React.createElement('h2', { className: "text-5xl font-bold text-cyan-600 mb-2" }, "Kết thúc!"),
+                  React.createElement('p', { className: "text-3xl mb-8" }, `Điểm cuối cùng: ${score}`),
+                  React.createElement('div', { className: "flex gap-4 mb-8" },
+                      React.createElement('button', { onClick: onRestart, className: "px-8 py-3 bg-cyan-500 text-white font-bold rounded-lg hover:bg-cyan-400 transition" }, "Chơi lại từ đầu"),
+                      incorrectWords.length > 0 && (
+                          React.createElement('button', { onClick: onRetryIncorrect, className: "px-8 py-3 bg-amber-400 text-slate-800 font-bold rounded-lg hover:bg-amber-300 transition" }, `Làm lại ${incorrectWords.length} từ sai`)
+                      )
+                  ),
+                  incorrectWords.length > 0 && (
+                      React.createElement('div', { className: "w-full max-w-lg" },
+                          React.createElement('button', { onClick: () => setShowIncorrect(!showIncorrect), className: "text-cyan-600 hover:underline mb-4" },
+                              showIncorrect ? 'Ẩn' : 'Hiện', " các từ sai"
+                          ),
+                          showIncorrect && (
+                              React.createElement('div', { className: "bg-white/80 rounded-lg p-4 max-h-60 overflow-y-auto" },
+                                  React.createElement('ul', null,
+                                      incorrectWords.map((word, index) => (
+                                          React.createElement('li', { key: index, className: "flex justify-between p-2 border-b border-slate-200" },
+                                              React.createElement('span', { className: "font-semibold" }, word.english),
+                                              React.createElement('span', { className: "text-slate-500" }, word.vietnamese)
+                                          )
+                                      ))
+                                  )
+                              )
+                          )
+                      )
+                  )
+              )
+          );
+      };
+
+      function App() {
+          const [gameState, setGameState] = useState('loading');
+          const [words, setWords] = useState([]);
+          const [playerName, setPlayerName] = useState('Player');
+          const [score, setScore] = useState(0);
+          const [currentWordIndex, setCurrentWordIndex] = useState(0);
+          const [incorrectWords, setIncorrectWords] = useState([]);
+          const [error, setError] = useState(null);
+      
+          const originalWords = React.useRef([]);
+      
+          useEffect(() => {
+              const fetchWords = async () => {
+                  try {
+                      const translated = await getTranslatedWords(WORD_LIST);
+                      originalWords.current = translated;
+                      setWords(shuffleArray(translated));
+                      setGameState('start');
+                  } catch (err) {
+                      console.error(err);
+                      setError("Không thể tải từ vựng. Vui lòng kiểm tra API key và thử lại.");
+                      setGameState('error');
+                  }
+              };
+              fetchWords();
+          }, []);
+      
+          const handleStartGame = (name) => {
+              setPlayerName(name);
+              setScore(0);
+              setCurrentWordIndex(0);
+              setIncorrectWords([]);
+              setWords(shuffleArray(originalWords.current));
+              setGameState('playing');
+          };
+      
+          const handleCorrect = (points) => {
+              setScore(prev => prev + points);
+          };
+      
+          const handleIncorrect = useCallback((word) => {
+              setIncorrectWords(prev => {
+                  if (prev.some(w => w.english === word.english)) {
+                      return prev;
+                  }
+                  return [...prev, word];
+              });
+          }, []);
+      
+          const handleNextWord = () => {
+              if (currentWordIndex < words.length - 1) {
+                  setCurrentWordIndex(prev => prev + 1);
+              } else {
+                  setGameState('finished');
+              }
+          };
+          
+          const handleRetryIncorrect = () => {
+              setWords(shuffleArray(incorrectWords));
+              setScore(0);
+              setCurrentWordIndex(0);
+              setIncorrectWords([]);
+              setGameState('playing');
+          };
+      
+          const renderContent = () => {
+              switch (gameState) {
+                  case 'loading':
+                      return React.createElement('div', { className: "flex flex-col items-center justify-center h-full" }, React.createElement(LoadingSpinner), React.createElement('p', { className: "mt-4 text-lg text-slate-600" }, "Đang tải từ vựng..."));
+                  case 'error':
+                      return React.createElement('div', { className: "flex items-center justify-center h-full text-center p-4" }, React.createElement('p', { className: "text-xl text-red-600" }, error));
+                  case 'start':
+                      return React.createElement(StartScreen, { onStart: handleStartGame });
+                  case 'playing':
+                      if (words.length > 0) {
+                          return React.createElement(GameScreen, {
+                              playerName: playerName,
+                              score: score,
+                              currentWord: words[currentWordIndex],
+                              wordIndex: currentWordIndex,
+                              totalWords: words.length,
+                              onCorrect: handleCorrect,
+                              onIncorrect: handleIncorrect,
+                              onNextWord: handleNextWord
+                          });
+                      }
+                      return null;
+                  case 'finished':
+                      return React.createElement(EndScreen, { score: score, incorrectWords: incorrectWords, onRestart: () => setGameState('start'), onRetryIncorrect: handleRetryIncorrect });
+                  default:
+                      return null;
+              }
+          };
+      
+          return (
+              React.createElement('main', { className: "font-sans min-h-screen w-full bg-sky-100 text-slate-800 flex flex-col items-center p-2 sm:p-4" },
+                  React.createElement('div', { className: "w-full h-full flex-grow flex flex-col max-w-4xl" },
+                      renderContent()
+                  )
+              )
+          );
+      }
+
+      // --- From index.tsx ---
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+      
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        React.createElement(React.StrictMode, null, 
+          React.createElement(App)
+        )
+      );
+
+    </script>
+  </body>
+</html>
