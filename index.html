@@ -40,7 +40,6 @@
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "react/": "https://aistudiocdn.com/react@^19.2.0/"
   }
@@ -52,38 +51,66 @@
     <script type="module">
       import React, { useState, useEffect, useCallback, useMemo } from 'react';
       import ReactDOM from 'react-dom/client';
-      import { GoogleGenAI, Type } from "@google/genai";
 
-      // --- From types.ts ---
-      // (Interfaces and types are defined here directly)
-
-      // --- From constants.ts ---
-      const WORD_LIST = [
-          "book 📖", "chair 🪑", "eraser 🧼", "pen 🖊️", "pencil ✏️", "table 🍽️", "desk 💻", "bookcase 📚",
-          "notebook 📓", "ruler 📏", "pupil 🧑‍🎓", "teacher 👩‍🏫", "bag 🎒", "board 📋", "chalk ✍️", "ball ⚽",
-          "bicycle 🚲", "camera 📷", "car 🚗", "computer 💻", "cupboard 🚪", "doll 🎎", "kite 🪁", "robot 🤖",
-          "train 🚆", "watch ⌚", "baby 👶", "brother 👦", "sister 👧", "cousin 🧑‍🤝‍🧑", "father 👨", "mother 👩",
-          "grandfather 👴", "grandmother 👵", "uncle 👨‍🦰", "aunt 👩‍🦰", "young 🌱", "old 🦳", "beautiful ✨",
-          "ugly 👹", "thin 🧍", "fat 🐘", "big 🐘", "small 🐁", "clean 🧼", "dirty 🐷", "sad 😢", "happy 😄",
-          "short 📏", "long ↔️", "bear 🐻", "bird 🐦", "cat 🐈", "chicken 🐔", "crocodile 🐊", "hippo 🦛",
-          "dog 🐕", "dolphin 🐬", "duck 🦆", "elephant 🐘", "fish 🐠", "giraffe 🦒", "horse 🐎", "lion 🦁",
-          "monkey 🐒", "mouse 🐁", "snake 🐍", "tiger 🐅", "arm 💪", "ear 👂", "eye 👀", "face 😊", "foot 🦶",
-          "feet 👣", "hair 👱", "hand ✋", "head 👤", "leg 🦵", "mouth 👄", "neck 🧣", "nose 👃", "shoulder 🤷",
-          "tail 🐈", "tooth 🦷", "teeth 🦷", "dress 👗", "hat 👒", "jacket 🧥", "shirt 👕", "shoes 👟",
-          "shorts 🩳", "skirt 👗", "socks 🧦", "sweater 🧥", "trousers 👖", "t-shirt 👕", "bike 🚲",
-          "boat 🚤", "bus 🚌", "helicopter 🚁", "truck 🚚", "motorbike 🏍️", "plane ✈️", "dance 💃",
-          "drive 🚗", "fly 🕊️", "listen 🎧", "listen to music 🎶", "match 🔥", "play badminton 🏸",
-          "play basketball 🏀", "play football ⚽", "play tennis 🎾", "play the guitar 🎸", "play the piano 🎹",
-          "point 👉", "read a book 📖", "ride 🏇", "watch TV 📺", "ride a bike 🚲", "say 💬", "sing 🎤",
-          "sit down 🪑", "stand up 🧍", "swim 🏊", "talk 🗣️", "walk 🚶", "armchair 🛋️", "bath 🛀",
-          "bathroom 🚽", "bed 🛏️", "bedroom 🛌", "wardrobe 🚪", "clock ⏰", "dining room 🍽️", "kitchen 🍳",
-          "lamp 💡", "living room 🛋️", "mat 🧘", "mirror 🪞", "phone 📱", "picture 🖼️", "room 🏠",
-          "sofa 🛋️", "apple 🍎", "banana 🍌", "bread 🍞", "grape 🍇", "watermelon 🍉", "hamburger 🍔",
-          "cake 🎂", "cookie 🍪", "chocolate 🍫", "ice cream 🍦", "orange 🍊", "pineapple 🍍",
-          "potato 🥔", "strawberry 🍓", "tomato 🍅", "flower 🌸"
+      // --- Static Word List with Translations ---
+      const STATIC_WORD_LIST = [
+          { english: "book 📖", vietnamese: "quyển sách" }, { english: "chair 🪑", vietnamese: "cái ghế" }, { english: "eraser 🧼", vietnamese: "cục tẩy" },
+          { english: "pen 🖊️", vietnamese: "bút mực" }, { english: "pencil ✏️", vietnamese: "bút chì" }, { english: "table 🍽️", vietnamese: "cái bàn" },
+          { english: "desk 💻", vietnamese: "bàn học" }, { english: "bookcase 📚", vietnamese: "tủ sách" }, { english: "notebook 📓", vietnamese: "quyển vở" },
+          { english: "ruler 📏", vietnamese: "cây thước" }, { english: "pupil 🧑‍🎓", vietnamese: "học sinh" }, { english: "teacher 👩‍🏫", vietnamese: "giáo viên" },
+          { english: "bag 🎒", vietnamese: "cái cặp" }, { english: "board 📋", vietnamese: "bảng" }, { english: "chalk ✍️", vietnamese: "phấn" },
+          { english: "ball ⚽", vietnamese: "quả bóng" }, { english: "bicycle 🚲", vietnamese: "xe đạp" }, { english: "camera 📷", vietnamese: "máy ảnh" },
+          { english: "car 🚗", vietnamese: "xe hơi" }, { english: "computer 💻", vietnamese: "máy tính" }, { english: "cupboard 🚪", vietnamese: "tủ chén" },
+          { english: "doll 🎎", vietnamese: "búp bê" }, { english: "kite 🪁", vietnamese: "cái diều" }, { english: "robot 🤖", vietnamese: "người máy" },
+          { english: "train 🚆", vietnamese: "tàu hỏa" }, { english: "watch ⌚", vietnamese: "đồng hồ" }, { english: "baby 👶", vietnamese: "em bé" },
+          { english: "brother 👦", vietnamese: "anh trai" }, { english: "sister 👧", vietnamese: "chị gái" }, { english: "cousin 🧑‍🤝‍🧑", vietnamese: "anh chị em họ" },
+          { english: "father 👨", vietnamese: "bố" }, { english: "mother 👩", vietnamese: "mẹ" }, { english: "grandfather 👴", vietnamese: "ông" },
+          { english: "grandmother 👵", vietnamese: "bà" }, { english: "uncle 👨‍🦰", vietnamese: "chú" }, { english: "aunt 👩‍🦰", vietnamese: "cô" },
+          { english: "young 🌱", vietnamese: "trẻ" }, { english: "old 🦳", vietnamese: "già" }, { english: "beautiful ✨", vietnamese: "đẹp" },
+          { english: "ugly 👹", vietnamese: "xấu" }, { english: "thin 🧍", vietnamese: "gầy" }, { english: "fat 🐘", vietnamese: "béo" },
+          { english: "big 🐘", vietnamese: "to" }, { english: "small 🐁", vietnamese: "nhỏ" }, { english: "clean 🧼", vietnamese: "sạch" },
+          { english: "dirty 🐷", vietnamese: "bẩn" }, { english: "sad 😢", vietnamese: "buồn" }, { english: "happy 😄", vietnamese: "vui" },
+          { english: "short 📏", vietnamese: "ngắn" }, { english: "long ↔️", vietnamese: "dài" }, { english: "bear 🐻", vietnamese: "con gấu" },
+          { english: "bird 🐦", vietnamese: "con chim" }, { english: "cat 🐈", vietnamese: "con mèo" }, { english: "chicken 🐔", vietnamese: "con gà" },
+          { english: "crocodile 🐊", vietnamese: "cá sấu" }, { english: "hippo 🦛", vietnamese: "hà mã" }, { english: "dog 🐕", vietnamese: "con chó" },
+          { english: "dolphin 🐬", vietnamese: "cá heo" }, { english: "duck 🦆", vietnamese: "con vịt" }, { english: "elephant 🐘", vietnamese: "con voi" },
+          { english: "fish 🐠", vietnamese: "con cá" }, { english: "giraffe 🦒", vietnamese: "hươu cao cổ" }, { english: "horse 🐎", vietnamese: "con ngựa" },
+          { english: "lion 🦁", vietnamese: "sư tử" }, { english: "monkey 🐒", vietnamese: "con khỉ" }, { english: "mouse 🐁", vietnamese: "con chuột" },
+          { english: "snake 🐍", vietnamese: "con rắn" }, { english: "tiger 🐅", vietnamese: "con hổ" }, { english: "arm 💪", vietnamese: "cánh tay" },
+          { english: "ear 👂", vietnamese: "tai" }, { english: "eye 👀", vietnamese: "mắt" }, { english: "face 😊", vietnamese: "khuôn mặt" },
+          { english: "foot 🦶", vietnamese: "bàn chân" }, { english: "feet 👣", vietnamese: "đôi chân" }, { english: "hair 👱", vietnamese: "tóc" },
+          { english: "hand ✋", vietnamese: "bàn tay" }, { english: "head 👤", vietnamese: "đầu" }, { english: "leg 🦵", vietnamese: "chân" },
+          { english: "mouth 👄", vietnamese: "miệng" }, { english: "neck 🧣", vietnamese: "cổ" }, { english: "nose 👃", vietnamese: "mũi" },
+          { english: "shoulder 🤷", vietnamese: "vai" }, { english: "tail 🐈", vietnamese: "đuôi" }, { english: "tooth 🦷", vietnamese: "răng" },
+          { english: "teeth 🦷", vietnamese: "hàm răng" }, { english: "dress 👗", vietnamese: "váy" }, { english: "hat 👒", vietnamese: "mũ" },
+          { english: "jacket 🧥", vietnamese: "áo khoác" }, { english: "shirt 👕", vietnamese: "áo sơ mi" }, { english: "shoes 👟", vietnamese: "giày" },
+          { english: "shorts 🩳", vietnamese: "quần đùi" }, { english: "skirt 👗", vietnamese: "chân váy" }, { english: "socks 🧦", vietnamese: "tất" },
+          { english: "sweater 🧥", vietnamese: "áo len" }, { english: "trousers 👖", vietnamese: "quần dài" }, { english: "t-shirt 👕", vietnamese: "áo phông" },
+          { english: "bike 🚲", vietnamese: "xe đạp" }, { english: "boat 🚤", vietnamese: "thuyền" }, { english: "bus 🚌", vietnamese: "xe buýt" },
+          { english: "helicopter 🚁", vietnamese: "trực thăng" }, { english: "truck 🚚", vietnamese: "xe tải" }, { english: "motorbike 🏍️", vietnamese: "xe máy" },
+          { english: "plane ✈️", vietnamese: "máy bay" }, { english: "dance 💃", vietnamese: "nhảy" }, { english: "drive 🚗", vietnamese: "lái xe" },
+          { english: "fly 🕊️", vietnamese: "bay" }, { english: "listen 🎧", vietnamese: "nghe" }, { english: "listen to music 🎶", vietnamese: "nghe nhạc" },
+          { english: "match 🔥", vietnamese: "diêm" }, { english: "play badminton 🏸", vietnamese: "chơi cầu lông" }, { english: "play basketball 🏀", vietnamese: "chơi bóng rổ" },
+          { english: "play football ⚽", vietnamese: "chơi bóng đá" }, { english: "play tennis 🎾", vietnamese: "chơi tennis" }, { english: "play the guitar 🎸", vietnamese: "chơi guitar" },
+          { english: "play the piano 🎹", vietnamese: "chơi piano" }, { english: "point 👉", vietnamese: "chỉ" }, { english: "read a book 📖", vietnamese: "đọc sách" },
+          { english: "ride 🏇", vietnamese: "cưỡi" }, { english: "watch TV 📺", vietnamese: "xem TV" }, { english: "ride a bike 🚲", vietnamese: "đi xe đạp" },
+          { english: "say 💬", vietnamese: "nói" }, { english: "sing 🎤", vietnamese: "hát" }, { english: "sit down 🪑", vietnamese: "ngồi xuống" },
+          { english: "stand up 🧍", vietnamese: "đứng lên" }, { english: "swim 🏊", vietnamese: "bơi" }, { english: "talk 🗣️", vietnamese: "nói chuyện" },
+          { english: "walk 🚶", vietnamese: "đi bộ" }, { english: "armchair 🛋️", vietnamese: "ghế bành" }, { english: "bath 🛀", vietnamese: "bồn tắm" },
+          { english: "bathroom 🚽", vietnamese: "phòng tắm" }, { english: "bed 🛏️", vietnamese: "giường" }, { english: "bedroom 🛌", vietnamese: "phòng ngủ" },
+          { english: "wardrobe 🚪", vietnamese: "tủ quần áo" }, { english: "clock ⏰", vietnamese: "đồng hồ" }, { english: "dining room 🍽️", vietnamese: "phòng ăn" },
+          { english: "kitchen 🍳", vietnamese: "nhà bếp" }, { english: "lamp 💡", vietnamese: "đèn" }, { english: "living room 🛋️", vietnamese: "phòng khách" },
+          { english: "mat 🧘", vietnamese: "thảm" }, { english: "mirror 🪞", vietnamese: "gương" }, { english: "phone 📱", vietnamese: "điện thoại" },
+          { english: "picture 🖼️", vietnamese: "bức tranh" }, { english: "room 🏠", vietnamese: "phòng" }, { english: "sofa 🛋️", vietnamese: "ghế sofa" },
+          { english: "apple 🍎", vietnamese: "táo" }, { english: "banana 🍌", vietnamese: "chuối" }, { english: "bread 🍞", vietnamese: "bánh mì" },
+          { english: "grape 🍇", vietnamese: "nho" }, { english: "watermelon 🍉", vietnamese: "dưa hấu" }, { english: "hamburger 🍔", vietnamese: "bánh hamburger" },
+          { english: "cake 🎂", vietnamese: "bánh ngọt" }, { english: "cookie 🍪", vietnamese: "bánh quy" }, { english: "chocolate 🍫", vietnamese: "sô cô la" },
+          { english: "ice cream 🍦", vietnamese: "kem" }, { english: "orange 🍊", vietnamese: "cam" }, { english: "pineapple 🍍", vietnamese: "dứa" },
+          { english: "potato 🥔", vietnamese: "khoai tây" }, { english: "strawberry 🍓", vietnamese: "dâu tây" }, { english: "tomato 🍅", vietnamese: "cà chua" },
+          { english: "flower 🌸", vietnamese: "hoa" }
       ];
 
-      // --- Utility Functions (from App.tsx and services/geminiService.ts) ---
+      // --- Utility Functions ---
       const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{3000}-\u{303F}]/gu;
       const stripEmoji = (str) => str.replace(EMOJI_REGEX, '').trim();
       const getEmoji = (str) => (str.match(EMOJI_REGEX) || []).join('');
@@ -212,68 +239,10 @@
           speakNextLetter();
       };
       
-      // --- From services/geminiService.ts ---
-      const getTranslatedWords = async (words) => {
-        if (!process.env.API_KEY) {
-          throw new Error("API_KEY environment variable not set");
-        }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const wordsWithoutEmojis = words.map(stripEmoji).filter(w => w.length > 0);
-        const prompt = `Translate the following English words into Vietnamese. Provide the response as a single, valid JSON array of objects. Each object must have an "english" and a "vietnamese" key. Do not include any other text, markdown formatting, or explanations in your response. The output must be only the JSON array. The words are: ${JSON.stringify(wordsWithoutEmojis)}`;
-        
-        try {
-          const response = await ai.models.generateContent({
-              model: "gemini-2.5-flash",
-              contents: prompt,
-              config: {
-                  responseMimeType: "application/json",
-                  responseSchema: {
-                      type: Type.ARRAY,
-                      items: {
-                          type: Type.OBJECT,
-                          properties: {
-                              english: { type: Type.STRING },
-                              vietnamese: { type: Type.STRING }
-                          },
-                          required: ["english", "vietnamese"]
-                      }
-                  }
-              }
-          });
-      
-          const jsonText = response.text.trim();
-          const translatedWords = JSON.parse(jsonText);
-          const translationMap = new Map(translatedWords.map(w => [w.english.toLowerCase(), w.vietnamese]));
-      
-          const result = words.map(originalWordWithEmoji => {
-            const wordWithoutEmoji = stripEmoji(originalWordWithEmoji);
-            if (!wordWithoutEmoji) return null;
-            const vietnamese = translationMap.get(wordWithoutEmoji.toLowerCase());
-            if (vietnamese) {
-              return { english: originalWordWithEmoji, vietnamese };
-            }
-            return null;
-          }).filter((w) => w !== null);
-          
-          return result;
-      
-        } catch (error) {
-          console.error("Error fetching translations from Gemini:", error);
-          throw new Error("Failed to get translations.");
-        }
-      };
-
-
-      // --- From App.tsx ---
+      // --- UI Components ---
       const SpeakerIcon = ({ className }) => (
           React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
               React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" })
-          )
-      );
-
-      const LoadingSpinner = () => (
-          React.createElement('div', { className: "flex justify-center items-center h-full" },
-              React.createElement('div', { className: "animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-cyan-500" })
           )
       );
 
@@ -494,31 +463,19 @@
           );
       };
 
+      // --- Main App Component ---
       function App() {
-          const [gameState, setGameState] = useState('loading');
+          const [gameState, setGameState] = useState('start');
           const [words, setWords] = useState([]);
           const [playerName, setPlayerName] = useState('Player');
           const [score, setScore] = useState(0);
           const [currentWordIndex, setCurrentWordIndex] = useState(0);
           const [incorrectWords, setIncorrectWords] = useState([]);
-          const [error, setError] = useState(null);
       
-          const originalWords = React.useRef([]);
+          const originalWords = React.useRef(STATIC_WORD_LIST);
       
           useEffect(() => {
-              const fetchWords = async () => {
-                  try {
-                      const translated = await getTranslatedWords(WORD_LIST);
-                      originalWords.current = translated;
-                      setWords(shuffleArray(translated));
-                      setGameState('start');
-                  } catch (err) {
-                      console.error(err);
-                      setError("Không thể tải từ vựng. Vui lòng kiểm tra API key và thử lại.");
-                      setGameState('error');
-                  }
-              };
-              fetchWords();
+              setWords(shuffleArray(originalWords.current));
           }, []);
       
           const handleStartGame = (name) => {
@@ -561,10 +518,6 @@
       
           const renderContent = () => {
               switch (gameState) {
-                  case 'loading':
-                      return React.createElement('div', { className: "flex flex-col items-center justify-center h-full" }, React.createElement(LoadingSpinner), React.createElement('p', { className: "mt-4 text-lg text-slate-600" }, "Đang tải từ vựng..."));
-                  case 'error':
-                      return React.createElement('div', { className: "flex items-center justify-center h-full text-center p-4" }, React.createElement('p', { className: "text-xl text-red-600" }, error));
                   case 'start':
                       return React.createElement(StartScreen, { onStart: handleStartGame });
                   case 'playing':
@@ -597,7 +550,7 @@
           );
       }
 
-      // --- From index.tsx ---
+      // --- Mount Application ---
       const rootElement = document.getElementById('root');
       if (!rootElement) {
         throw new Error("Could not find root element to mount to");
